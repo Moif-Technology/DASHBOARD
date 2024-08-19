@@ -1,6 +1,5 @@
 import 'package:fitness_dashboard_ui/const/constant.dart';
 import 'package:fitness_dashboard_ui/widgets/pie_chart_widget.dart';
-import 'package:fitness_dashboard_ui/widgets/scheduled_widget.dart';
 import 'package:fitness_dashboard_ui/widgets/summary_details.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +10,8 @@ class SummaryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print(
+        'SummaryWidget: Selected Date received is ${selectedDate.toString()}');
     return Container(
       decoration: const BoxDecoration(
         color: backgroundColor,
@@ -53,10 +54,6 @@ class SummaryWidget extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: defaultPadding),
-                  // Expanded(
-                  //   flex: 1,
-                  //   child: const Scheduled(),
-                  // ),
                 ],
               );
             } else {
@@ -78,7 +75,6 @@ class SummaryWidget extends StatelessWidget {
                     const SizedBox(height: 16),
                     SummaryDetails(selectedDate: selectedDate),
                     const SizedBox(height: 40),
-                    // const Scheduled(),
                   ],
                 ),
               );

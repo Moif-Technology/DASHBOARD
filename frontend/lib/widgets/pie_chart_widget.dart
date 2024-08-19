@@ -19,20 +19,24 @@ class PieChart2State extends State<PieChartSample2> {
   @override
   void initState() {
     super.initState();
+    print('PieChartSample2 initState: Date is ${widget.selectedDate}');
     fetchData(widget.selectedDate);
   }
 
   Future<void> fetchData(DateTime date) async {
-  await chartData.fetchAndSetData(date);
-  setState(() {
-    isLoading = false;
-  });
-}
+    print('PieChartSample2 fetchData: Date is $date');
+    await chartData.fetchAndSetData(date);
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   @override
   void didUpdateWidget(covariant PieChartSample2 oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedDate != widget.selectedDate) {
+      print(
+          'PieChartSample2 didUpdateWidget: Old Date: ${oldWidget.selectedDate}, New Date: ${widget.selectedDate}');
       setState(() {
         isLoading = true;
       });
@@ -42,10 +46,22 @@ class PieChart2State extends State<PieChartSample2> {
 
   @override
   Widget build(BuildContext context) {
+    print('PieChartSample2 build: Date is ${widget.selectedDate}');
     return Column(
       children: <Widget>[
         if (isLoading)
           const Center(child: CircularProgressIndicator())
+        else if (chartData.paiChartSelectionDatas.isEmpty)
+          const Center(
+            child: Text(
+              'No data available for the selected date.',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color.fromARGB(255, 243, 117, 33),
+              ),
+            ),
+          )
         else
           AspectRatio(
             aspectRatio: 1,
@@ -65,34 +81,13 @@ class PieChart2State extends State<PieChartSample2> {
                     });
                   },
                 ),
-                borderData: FlBorderData(
-                  show: false,
-                ),
+                borderData: FlBorderData(show: false),
                 sectionsSpace: 0,
                 centerSpaceRadius: 40,
                 sections: showingSections(),
               ),
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: chartData.areaSales.asMap().entries.map((entry) {
-              int index = entry.key;
-              Map<String, dynamic> area = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: Indicator(
-                  color: chartData.paiChartSelectionDatas[index].color!,
-                  text:
-                      '${area['areaName']} (${chartData.paiChartSelectionDatas[index].value.toStringAsFixed(1)}%)',
-                  isSquare: true,
-                ),
-              );
-            }).toList(),
-          ),
-        ),
       ],
     );
   }
@@ -116,50 +111,5 @@ class PieChart2State extends State<PieChartSample2> {
         ),
       );
     }).toList();
-  }
-}
-
-class Indicator extends StatelessWidget {
-  final Color color;
-  final String text;
-  final bool isSquare;
-  final double size;
-  final Color textColor;
-
-  const Indicator({
-    required this.color,
-    required this.text,
-    required this.isSquare,
-    this.size = 16,
-    this.textColor = const Color(0xff505050),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: isSquare ? BoxShape.rectangle : BoxShape.circle,
-            color: color,
-          ),
-        ),
-        const SizedBox(
-          width: 4,
-        ),
-        Flexible(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }

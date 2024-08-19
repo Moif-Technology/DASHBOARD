@@ -1,86 +1,84 @@
-import 'package:fitness_dashboard_ui/const/constant.dart';
-import 'package:fitness_dashboard_ui/util/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:fitness_dashboard_ui/widgets/side_menu_widget.dart';
+import 'package:fitness_dashboard_ui/util/responsive.dart';
 
 class HeaderWidget extends StatefulWidget {
   final Function(DateTime) onDateSelected;
+  final DateTime selectedDate;
 
-  const HeaderWidget({super.key, required this.onDateSelected});
+  const HeaderWidget({
+    super.key,
+    required this.onDateSelected,
+    required this.selectedDate,
+  });
 
   @override
   _HeaderWidgetState createState() => _HeaderWidgetState();
 }
 
 class _HeaderWidgetState extends State<HeaderWidget> {
-  DateTime? _selectedDate;
-
   void _pickDate() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: widget.selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
     if (pickedDate != null) {
-      setState(() {
-        _selectedDate = pickedDate;
-      });
       widget.onDateSelected(pickedDate);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            if (!Responsive.isDesktop(context))
-              Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: InkWell(
-                  onTap: () => Scaffold.of(context).openDrawer(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: Icon(
-                      Icons.menu,
-                      color: primaryColor, // Updated color
+        // For mobile screens, show the hamburger menu instead of the full sidebar
+        if (!Responsive.isDesktop(context))
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Scaffold.of(context).openDrawer(); // Open the side menu
+            },
+          ),
+
+        // SideMenu is integrated and visible directly for larger screens
+        if (Responsive.isDesktop(context)) const SideMenuWidget(),
+
+        // Date picker and selected date display
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.calendar_month_sharp,
+                      color: Colors.grey,
                       size: 25,
                     ),
+                    onPressed: _pickDate,
+                  ),
+                  Text(
+                    'Selected Date: ${DateFormat('yyyy-MM-dd').format(widget.selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () => Scaffold.of(context).openEndDrawer(),
+                child: CircleAvatar(
+                  backgroundColor: Colors.transparent,
+                  child: Image.asset(
+                    "assets/images/avatar.png",
+                    width: 32,
                   ),
                 ),
               ),
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.calendar_month_sharp,
-                    color: Colors.grey,
-                    size: 25,
-                  ),
-                  onPressed: _pickDate,
-                ),
-                Text(
-                  _selectedDate != null
-                      ? 'Selected Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}'
-                      : 'Select Date',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ],
-            ),
-            InkWell(
-              onTap: () => Scaffold.of(context).openEndDrawer(),
-              child: CircleAvatar(
-                backgroundColor: Colors.transparent,
-                child: Image.asset(
-                  "assets/images/avatar.png",
-                  width: 32,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

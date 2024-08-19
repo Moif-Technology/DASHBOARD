@@ -6,10 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class ApiServices {
-  // final String _baseUrl = 'http://192.168.1.150:5000';
-  final String _baseUrl = 'https://155f-5-195-73-11.ngrok-free.app';
+  final String _baseUrl = 'http://10.39.1.100:5000';
+  // final String _baseUrl = 'https://155f-5-195-73-11.ngrok-free.app';
   final FlutterSecureStorage _storage = FlutterSecureStorage();
   String? _token;
+  int? lastResponseStatusCode;
 
   ApiServices();
 
@@ -71,8 +72,8 @@ class ApiServices {
         );
 
         if (response.statusCode == 200) {
-          await _storage.deleteAll();
-          _token = null;
+          await _storage.deleteAll(); // Clear all secure storage data
+          _token = null; // Clear in-memory token
           print('Logout successful.');
         } else {
           throw Exception('Failed to logout: ${response.body}');
@@ -123,6 +124,7 @@ class ApiServices {
 
   Future<Map<String, dynamic>> fetchSalesDetails(String date) async {
     final response = await get('/salesDetails?date=$date');
+    print('${date} itho????');
     final data = await _handleApiResponse(response);
     if (data is Map<String, dynamic>) {
       return data;
@@ -163,16 +165,33 @@ class ApiServices {
   }
 
   Future<List<Map<String, dynamic>>> fetchAreaSales(DateTime date) async {
-    final formattedDate = DateFormat('yyyy-MM-dd').format(date);
-    final response = await get('/areaSales?date=$formattedDate');
-    final data = await _handleApiResponse(response);
-    if (data is List<dynamic>) {
-      return data.map((item) => Map<String, dynamic>.from(item)).toList();
-    } else if (data is Map<String, dynamic>) {
-      return [data]; // Wrap the single map in a list
-    } else {
-      throw Exception(
-          'Unexpected data format: Expected a List<Map<String, dynamic>> or Map<String, dynamic>');
+    try {
+      final response = await get('/areaSales?date=$date');
+      lastResponseStatusCode = response.statusCode;
+      if (response.statusCode == 404) {
+        // Handle the scenario where area sales data is not available
+        print('Area sales data is not available for this company.');
+        return []; // Return an empty list if data is not available
+      }
+
+      if (response.statusCode == 403) {
+        // Handle token expiry or subscription expiry
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message']);
+      }
+
+      final data = await _handleApiResponse(response);
+      if (data is List<dynamic>) {
+        return data.map((item) => Map<String, dynamic>.from(item)).toList();
+      } else if (data is Map<String, dynamic>) {
+        return [data]; // Wrap the single map in a list
+      } else {
+        throw Exception(
+            'Unexpected data format: Expected a List<Map<String, dynamic>> or Map<String, dynamic>');
+      }
+    } catch (e) {
+      print('Error fetching area sales data: $e');
+      return [];
     }
   }
 }

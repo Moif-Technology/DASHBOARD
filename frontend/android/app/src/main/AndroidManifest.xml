@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="fitness_dashboard_ui"
+        android:label="Dashboard Invent POS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

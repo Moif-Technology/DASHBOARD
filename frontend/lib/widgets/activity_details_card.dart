@@ -178,4 +178,4 @@ class _ActivityDetailsCardState extends State<ActivityDetailsCard> {
       ],
     );
   }
-}
+} 
