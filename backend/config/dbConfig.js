@@ -19,12 +19,13 @@ const dbConfig = {
 // Function to create a new pool for each database
 const createDatabasePool = async (databaseName) => {
   try {
+  
     const pool = new mssql.ConnectionPool({ ...dbConfig, database: databaseName });
     await pool.connect();
-    console.log(`Connected to ${databaseName} SQL Server`);
+    console.log(`Successfully connected to the ${databaseName} SQL Server`);
     return pool;
   } catch (err) {
-    console.error(`${databaseName} Database connection failed:`, err);
+    console.error(`Failed to connect to the ${databaseName} database:`, err);
     throw err;
   }
 };

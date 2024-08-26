@@ -5,12 +5,15 @@ import 'package:intl/intl.dart';
 class Details {
   final ApiServices apiService = ApiServices();
 
-  Future<List<DetailModel>> fetchDetails(DateTime date) async {
+  Future<List<DetailModel>> fetchDetails(DateTime date,
+      {String? branchId}) async {
     String formattedDate = DateFormat('yyyy-MM-dd').format(date);
 
-    // Fetch the sales details from the API with the date parameter
-    Map<String, dynamic> salesDetails =
-        await apiService.fetchSalesDetails(formattedDate);
+    // Fetch the sales details from the API with the date and branchId parameters
+    Map<String, dynamic> salesDetails = await apiService.fetchSalesDetails(
+      formattedDate,
+      branchId: branchId, // Pass the branchId here
+    );
 
     // Fetch the customer count from the API with the date parameter
     int customerCount = await apiService.fetchCustomerCount(formattedDate);

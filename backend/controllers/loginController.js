@@ -4,86 +4,131 @@ import { generateToken, verifyToken } from "../config/auth.js";
 
 export const login = async (req, res) => {
   const { username, password } = req.body;
-  console.log(req.body, "Req body Recieved");
+  console.log(req.body, "Req body Received");
 
   try {
     // Step 1: Connect to the CompanyDetails database
     const sql = await connectToCompanyDetails();
 
-    // Check user credentials in dbo.UserLog table
+    // Step 2: Retrieve user details and validate credentials
     const userResult = await sql
       .request()
       .input("Login", mssql.VarChar, username)
-      .query("SELECT * FROM CompanyDetails.dbo.UserLog WHERE Login = @Login");
+      .query(`
+        SELECT CompanyID, StationID, SystemRoleID, Password 
+        FROM CompanyDetails.dbo.UserLog 
+        WHERE Login = @Login
+      `);
 
-    console.log(userResult, "User");
-    if (userResult.recordset.length === 0) {
+    if (userResult.recordset.length === 0 || password !== userResult.recordset[0].Password) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    const user = userResult.recordset[0];
+    const { CompanyID, StationID, SystemRoleID } = userResult.recordset[0];
+    console.log(userResult.recordset[0]);
 
-    // Check if the password matches
-    if (password !== user.Password) {
-      return res.status(401).json({ message: "Invalid username or password" });
-    }
-
-    // Step 2: Retrieve the CompanyID and check in dbo.CompanyLog table
-    const companyId = user.CompanyID;
-    const companyResult = await sql
-      .request()
-      .input("CompanyID", mssql.VarChar, companyId)
-      .query(
-        "SELECT * FROM CompanyDetails.dbo.CompanyLog WHERE CompanyID = @CompanyID"
-      );
-
-    console.log(companyResult, "Company Result");
+    // Step 3: Fetch company, branch details, and branch list in parallel
+    const [companyResult, branchResult, branchesListResult] = await Promise.all([
+      sql.request().input("CompanyID", mssql.VarChar, CompanyID)
+        .query(`
+          SELECT CompanyName, DbSchemaName 
+          FROM CompanyDetails.dbo.CompanyLog 
+          WHERE CompanyID = @CompanyID
+        `),
+      sql.request().input("CompanyID", mssql.VarChar, CompanyID)
+        .input("BranchID", mssql.VarChar, StationID)
+        
+        .query(`
+          SELECT BranchName, ExpiryDate, ExpiryStatus 
+          FROM CompanyDetails.dbo.Branch_Log 
+          WHERE CompanyID = @CompanyID AND BranchID = @BranchID
+        `),
+     
+      sql.request().input("CompanyID", mssql.VarChar, CompanyID)
+        .query(`
+          SELECT BranchID, BranchName 
+          FROM CompanyDetails.dbo.Branch_Log 
+          WHERE CompanyID = @CompanyID AND ExpiryStatus = 0
+        `)
+    ]);
+console.log(companyResult,`
+          SELECT CompanyName, DbSchemaName 
+          FROM CompanyDetails.dbo.CompanyLog 
+          WHERE CompanyID = @CompanyID
+        `, branchResult,`
+          SELECT BranchName, ExpiryDate, ExpiryStatus 
+          FROM CompanyDetails.dbo.Branch_Log 
+          WHERE CompanyID = @CompanyID AND BranchID = @BranchID
+        `, branchesListResult,`
+          SELECT BranchID, BranchName 
+          FROM CompanyDetails.dbo.Branch_Log 
+          WHERE CompanyID = @CompanyID AND ExpiryStatus = 0
+        `);
     if (companyResult.recordset.length === 0) {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    const company = companyResult.recordset[0];
-    const companyName = company.CompanyName;
-    const dbSchemaName = company.DbSchemaName;
-    let expiryStatus = company.ExpiryStatus;
-    const expiryDate = new Date(company.ExpiryDate);
-
-    console.log(`Initial Expiry Status: ${expiryStatus}`);
-    console.log(`Current Date: ${new Date()}, Expiry Date: ${expiryDate}`);
-
-    // Step 3: Check for ExpiryStatus and ExpiryDate
-    const currentDate = new Date();
-
-    if (expiryDate < currentDate && expiryStatus !== 1) {
-      // Update the ExpiryStatus to 1 if the expiry date has passed and it wasn't updated already
-      await sql.request().input("CompanyID", mssql.VarChar, companyId) // Bind the @CompanyID parameter
-        .query(`
-          UPDATE CompanyDetails.dbo.CompanyLog 
-          SET ExpiryStatus = 1 
-          WHERE CompanyID = @CompanyID
-        `);
-      expiryStatus = 1;
+    if (branchResult.recordset.length === 0) {
+      // Even if no specific branch is found, allow login
+      console.log("No branch found for the StationID, proceeding with login");
     }
 
-    // Step 4: Generate JWT Token using the utility function, including ExpiryStatus and ExpiryDate
+    const { CompanyName, DbSchemaName } = companyResult.recordset[0];
+    let { BranchName, ExpiryDate, ExpiryStatus } = branchResult.recordset[0] || {};
+    console.log(BranchName, ExpiryDate, ExpiryStatus);
+    const branchesList = branchesListResult.recordset;
+
+    // Check if DbSchemaName is undefined or null
+    if (!DbSchemaName) {
+      return res.status(500).json({ message: "Invalid dbSchemaName. Please check the configuration." });
+    }
+
+    // Step 4: Perform Expiry Check and update ExpiryStatus if needed
+    const currentDate = new Date();
+    ExpiryDate = ExpiryDate ? new Date(ExpiryDate) : null;
+
+    if (ExpiryDate && ExpiryDate < currentDate && ExpiryStatus !== 1) {
+      await sql.request()
+        .input("CompanyID", mssql.VarChar, CompanyID)
+        .input("BranchID", mssql.VarChar, StationID)
+        .query(`
+          UPDATE CompanyDetails.dbo.Branch_Log 
+          SET ExpiryStatus = 1 
+          WHERE CompanyID = @CompanyID AND BranchID = @BranchID
+        `);
+      ExpiryStatus = 0;
+    }
+    console.log(`
+          UPDATE CompanyDetails.dbo.Branch_Log 
+          SET ExpiryStatus = 1 
+          WHERE CompanyID = @CompanyID AND BranchID = @BranchID
+        `);
+
+    // Generate JWT Token
     const token = generateToken({
       username,
-      companyId,
-      companyName,
-      dbSchemaName,
-      expiryStatus,
-      expiryDate: expiryDate.toISOString(), // Add expiryDate to the token payload
+      CompanyID,
+      CompanyName,
+      DbSchemaName,
+      StationID,
+      SystemRoleID,
+      BranchName: BranchName, // Default if no branch name is found
+      ExpiryStatus: ExpiryStatus, // Default to not expired
+      ExpiryDate: ExpiryDate ? ExpiryDate.toISOString() : null,
     });
-    console.log(token, "Token Generated");
 
-    // Respond with the token and company details
+    // Respond with the token and additional user details
     res.json({
       token,
-      companyId,
-      companyName,
-      dbSchemaName,
-      expiryStatus,
-      expiryDate: expiryDate.toISOString(),
+      CompanyID,
+      CompanyName,
+      DbSchemaName,
+      StationID,
+      SystemRoleID,
+      BranchName: BranchName || "N/A",
+      ExpiryStatus: ExpiryStatus || 1,
+      ExpiryDate: ExpiryDate ? ExpiryDate.toISOString() : null,
+      branches: branchesList.length > 1 ? branchesList : [] // Only include branches if more than one exists
     });
   } catch (error) {
     console.error(error);

@@ -1,17 +1,18 @@
-import 'package:fitness_dashboard_ui/model/detail_model.dart';
 import 'package:flutter/material.dart';
 import 'package:fitness_dashboard_ui/data/details.dart';
 import 'package:fitness_dashboard_ui/util/responsive.dart';
 import 'package:fitness_dashboard_ui/widgets/custom_card_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:fitness_dashboard_ui/const/constant.dart';
+import 'package:fitness_dashboard_ui/model/detail_model.dart';
 
 class ActivityDetailsCard extends StatefulWidget {
   final DateTime selectedDate;
+  final String? branchId;
 
   const ActivityDetailsCard({
     super.key,
     required this.selectedDate,
+    this.branchId,
   });
 
   @override
@@ -25,20 +26,24 @@ class _ActivityDetailsCardState extends State<ActivityDetailsCard> {
   @override
   void initState() {
     super.initState();
-    _fetchDetails(widget.selectedDate);
+    _fetchDetails();
   }
 
-  void _fetchDetails(DateTime date) {
+  void _fetchDetails() {
     setState(() {
-      _futureDetails = details.fetchDetails(date);
+      _futureDetails = details.fetchDetails(
+        widget.selectedDate,
+        branchId: widget.branchId, // Pass branch ID
+      );
     });
   }
 
   @override
-  void didUpdateWidget(ActivityDetailsCard oldWidget) {
+  void didUpdateWidget(covariant ActivityDetailsCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedDate != widget.selectedDate) {
-      _fetchDetails(widget.selectedDate);
+    if (oldWidget.selectedDate != widget.selectedDate ||
+        oldWidget.branchId != widget.branchId) {
+      _fetchDetails();
     }
   }
 
@@ -48,11 +53,11 @@ class _ActivityDetailsCardState extends State<ActivityDetailsCard> {
       future: _futureDetails,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text('No data available'));
+          return const Center(child: Text('No data available'));
         } else {
           return StaggeredGridView.countBuilder(
             crossAxisCount: Responsive.isMobile(context) ? 2 : 4,
@@ -66,79 +71,72 @@ class _ActivityDetailsCardState extends State<ActivityDetailsCard> {
               bool isSpecialCard =
                   data.title == "Sales" || data.title == "Cash";
 
-              return Container(
-                width: isSpecialCard
-                    ? (Responsive.isMobile(context) ? 200 : 300)
-                    : null,
-                child: CustomCard(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        data.icon,
-                        width: 50,
-                        height: 50,
-                      ),
-                      if (isSpecialCard) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10, bottom: 4),
-                          child: Text(
-                            data.title == "Sales"
-                                ? "Bill Count"
-                                : "Sales Amount",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+              return CustomCard(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      data.icon,
+                      width: 50,
+                      height: 50,
+                    ),
+                    if (isSpecialCard) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10, bottom: 4),
+                        child: Text(
+                          data.title == "Sales" ? "Bill Count" : "Sales Amount",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          buildDetailColumn(
+                            data.value,
+                            data.title,
+                            Colors.white,
+                          ),
+                          if (data.value2 != null)
                             buildDetailColumn(
-                              data.value,
-                              data.title,
+                              data.value2!,
+                              data.title2!,
                               Colors.white,
                             ),
-                            if (data.value2 != null)
-                              buildDetailColumn(
-                                data.value2!,
-                                data.title2!,
-                                Colors.white,
-                              ),
-                            if (data.value3 != null)
-                              buildDetailColumn(
-                                data.value3!,
-                                data.title3!,
-                                Colors.white,
-                              ),
-                          ],
-                        ),
-                      ] else ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 15, bottom: 4),
-                          child: Text(
-                            data.value,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: Color.fromARGB(255, 240, 236, 236),
-                              fontWeight: FontWeight.w600,
+                          if (data.value3 != null)
+                            buildDetailColumn(
+                              data.value3!,
+                              data.title3!,
+                              Colors.white,
                             ),
-                          ),
-                        ),
-                        Text(
-                          data.title,
+                        ],
+                      ),
+                    ] else ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 15, bottom: 4),
+                        child: Text(
+                          data.value,
                           style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                            fontWeight: FontWeight.normal,
+                            fontSize: 18,
+                            color: Color.fromARGB(255, 240, 236, 236),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ],
+                      ),
+                      Text(
+                        data.title,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.white,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               );
             },
@@ -178,4 +176,4 @@ class _ActivityDetailsCardState extends State<ActivityDetailsCard> {
       ],
     );
   }
-} 
+}

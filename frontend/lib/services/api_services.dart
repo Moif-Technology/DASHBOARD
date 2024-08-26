@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class ApiServices {
-  final String _baseUrl = 'http://10.39.1.100:5000';
+  final String _baseUrl = 'http://10.39.1.171:5000';
   // final String _baseUrl = 'https://155f-5-195-73-11.ngrok-free.app';
   final FlutterSecureStorage _storage = FlutterSecureStorage();
   String? _token;
@@ -31,29 +31,45 @@ class ApiServices {
         final responseBody = jsonDecode(response.body);
         print('Login response body: $responseBody');
 
-        final token = responseBody['token'];
-        final companyId = responseBody['companyId'];
-        final companyName = responseBody['companyName'];
-        final dbSchemaName = responseBody['dbSchemaName'];
-        final expiryStatus = int.parse(responseBody['expiryStatus'].toString());
-        final expiryDate = responseBody['expiryDate'];
+        final token = responseBody['token'] as String;
+        final companyId = responseBody['CompanyID']?.toString() ?? "";
+        final companyName = responseBody['CompanyName']?.toString() ?? "";
+        final dbSchemaName = responseBody['DbSchemaName']?.toString() ?? "";
+        final stationId = responseBody['StationID']?.toString() ?? "";
+        final systemRoleId = responseBody['SystemRoleID']?.toString() ?? "";
+        final branchName = responseBody['BranchName']?.toString() ?? "";
+        final expiryStatus =
+            int.tryParse(responseBody['ExpiryStatus'].toString()) ?? 0;
+        final expiryDate = responseBody['ExpiryDate']?.toString() ?? "";
 
-        await TokenManager.saveToken(token);
-        await TokenManager.saveCompanyID(companyId);
-        await TokenManager.saveCompanyName(companyName);
-        await TokenManager.saveDbSchemaName(dbSchemaName);
-        await TokenManager.saveExpiryStatus(expiryStatus);
-        await TokenManager.saveExpiryDate(expiryDate);
+        // Removed branch fetching logic here
 
-        _token = token; // Store the token in memory
+        await TokenManager.saveAllData(
+          token: token,
+          companyId: companyId,
+          companyName: companyName,
+          dbSchemaName: dbSchemaName,
+          stationId: stationId,
+          systemRoleId: systemRoleId,
+          branchName: branchName,
+          expiryStatus: expiryStatus,
+          expiryDate: expiryDate,
+        );
+
+        _token = token;
 
         print('Login successful. Token and company details saved.');
-        return null; // No error, return null
+        return null;
       } else if (response.statusCode == 401) {
         return 'Invalid username or password';
       } else if (response.statusCode == 403) {
         return 'Company subscription has expired.';
+      } else if (response.statusCode == 404) {
+        // Handle specific status code scenarios
+        final errorData = jsonDecode(response.body);
+        print('Error: ${errorData['message']}'); // Print the error message
       } else {
+        print('Error: ${response.body}');
         return 'Error: ${response.statusCode}';
       }
     } catch (e) {
@@ -109,6 +125,35 @@ class ApiServices {
     return response;
   }
 
+  Future<List<Map<String, String>>> fetchBranches() async {
+    try {
+      final response = await get('/fetchBranches');
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print(jsonData);
+        if (jsonData is Map<String, dynamic> &&
+            jsonData.containsKey('branches')) {
+          final branchList = jsonData['branches'];
+          if (branchList is List<dynamic>) {
+            return branchList
+                .map((branch) => Map<String, String>.from(branch))
+                .toList();
+          } else {
+            throw Exception('Invalid JSON response');
+          }
+        } else {
+          throw Exception('Invalid JSON response');
+        }
+      } else {
+        print('Error fetching branches: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching branches: $e');
+      return [];
+    }
+  }
+
   Map<String, String> _buildHeaders() {
     return {
       'Content-Type': 'application/json',
@@ -122,16 +167,17 @@ class ApiServices {
     }
   }
 
-  Future<Map<String, dynamic>> fetchSalesDetails(String date) async {
-    final response = await get('/salesDetails?date=$date');
-    print('${date} itho????');
-    final data = await _handleApiResponse(response);
-    if (data is Map<String, dynamic>) {
-      return data;
-    } else {
-      throw Exception(
-          'Unexpected data format: Expected a Map<String, dynamic>');
-    }
+  Future<Map<String, dynamic>> fetchSalesDetails(String date,
+      {String? branchId}) async {
+    // Prioritize the manually selected branch ID over the token-stored branch ID
+    branchId ??= await TokenManager.getStationID();
+
+    final endpoint = branchId != null
+        ? '/salesDetails?date=$date&branchId=$branchId'
+        : '/salesDetails?date=$date';
+
+    final response = await get(endpoint);
+    return await _handleApiResponse(response);
   }
 
   Future<int> fetchCustomerCount(String date) async {
