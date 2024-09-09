@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:fitness_dashboard_ui/widgets/countersDialog.dart';
 import 'package:flutter/material.dart';
 import 'package:fitness_dashboard_ui/util/responsive.dart';
 import 'package:fitness_dashboard_ui/widgets/dashboard_widget.dart';
@@ -26,13 +27,29 @@ class _MainScreenState extends State<MainScreen> {
   List<Map<String, String>> _branches = [];
   bool _isFirstLoad = true;
   DateTime _lastUpdated = DateTime.now();
-  final Stopwatch _stopwatch = Stopwatch();
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _initializeData();
-    _stopwatch.start();
+    _startAutoUpdateTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoUpdateTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          // Just triggering a rebuild every second
+        });
+      }
+    });
   }
 
   Future<void> _initializeData() async {
@@ -41,19 +58,22 @@ class _MainScreenState extends State<MainScreen> {
 
     Map<String, String>? defaultBranch;
     if (branches.isNotEmpty) {
+      // Find the default branch using the defaultBranchId
       defaultBranch = branches.firstWhere(
-          (branch) => branch['id'] == defaultBranchId,
+          (branch) => branch['BranchID'] == defaultBranchId,
           orElse: () => branches.first);
     }
 
     setState(() {
       _branches = branches;
-      _selectedBranchId = defaultBranch != null ? defaultBranch['id'] : null;
-      _defaultBranchName =
-          defaultBranch != null ? defaultBranch['name'] : 'No Branch Available';
+      // Set the selected branch ID and name for the dropdown
+      _selectedBranchId =
+          defaultBranch != null ? defaultBranch['BranchID'] : null;
+      _defaultBranchName = defaultBranch != null
+          ? defaultBranch['BranchName']
+          : 'No Branch Available';
     });
-
-    print("Selected Branch ID: $defaultBranch");
+    print("Selected Branch ID: $_selectedBranchId");
     if (_isFirstLoad) {
       _isFirstLoad = false;
       _fetchData();
@@ -74,8 +94,6 @@ class _MainScreenState extends State<MainScreen> {
         _fetchedData = data;
         _isSubscriptionExpired = _fetchedData?['expired'] ?? false;
         _lastUpdated = DateTime.now();
-        _stopwatch.reset();
-        _stopwatch.start();
       });
     } catch (error) {
       print("Error fetching data: $error");
@@ -87,9 +105,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   String _getFormattedElapsedTime() {
-    final elapsed = _stopwatch.elapsed;
+    final elapsed = DateTime.now().difference(_lastUpdated);
     final minutes = elapsed.inMinutes.toString().padLeft(2, "0");
-    return "$minutes min ago";
+    final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, "0");
+    return "$minutes min $seconds sec ago";
   }
 
   void _onDateSelected(DateTime date) {
@@ -120,6 +139,18 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  // Function to show the counters dialog
+// Function to show the counters dialog with branchId
+void _showCountersDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return CountersDialog(branchId: _selectedBranchId); // Pass branchId
+    },
+  );
+}
+
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = Responsive.isDesktop(context);
@@ -135,7 +166,10 @@ class _MainScreenState extends State<MainScreen> {
       endDrawer: isMobile
           ? SizedBox(
               width: MediaQuery.of(context).size.width * 0.8,
-              child: SummaryWidget(selectedDate: _selectedDate),
+              child: SummaryWidget(
+                selectedDate: _selectedDate,
+                branchId: _selectedBranchId,
+              ),
             )
           : null,
       body: SafeArea(
@@ -174,63 +208,13 @@ class _MainScreenState extends State<MainScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Info and Refresh Section
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            margin: const EdgeInsets.only(bottom: 24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.2),
-                                  spreadRadius: 2,
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _defaultBranchName ?? 'Branch Info',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Last updated ${_getFormattedElapsedTime()}",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.refresh,
-                                      color: Colors.blue[700]),
-                                  onPressed: _fetchData,
-                                  tooltip: 'Refresh Data',
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Branch Selector Section
+                          // Header Section with Branch Dropdown and Last Updated
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            margin: const EdgeInsets.only(bottom: 24),
+                                horizontal: 16, vertical: 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(15),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.grey.withOpacity(0.2),
@@ -243,43 +227,115 @@ class _MainScreenState extends State<MainScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Branch Info Heading
                                 Text(
-                                  'Select Your Branch',
+                                  'Branch Info',
                                   style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[800],
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                _branches.isEmpty
-                                    ? const Center(
-                                        child: CircularProgressIndicator(),
-                                      )
-                                    : DropdownButton<String>(
-                                        value: _selectedBranchId,
-                                        onChanged: _onBranchSelected,
-                                        items: _branches.map((branch) {
-                                          return DropdownMenuItem<String>(
-                                            value: branch['BranchID'],
-                                            child: Text(
-                                              branch['BranchName'] ??
-                                                  'Unnamed Branch',
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.black87,
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: DropdownButton<String>(
+                                          value: _selectedBranchId,
+                                          onChanged: _onBranchSelected,
+                                          items: _branches.map((branch) {
+                                            return DropdownMenuItem<String>(
+                                              value: branch['BranchID'],
+                                              child: Text(
+                                                branch['BranchName'] ??
+                                                    'Unnamed Branch',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Colors.black87,
+                                                ),
                                               ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                        isExpanded: true,
-                                        underline: const SizedBox(),
+                                            );
+                                          }).toList(),
+                                          isExpanded: true,
+                                          underline: const SizedBox(),
+                                          icon: const Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.black54,
+                                            size: 18,
+                                          ),
+                                        ),
                                       ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh, size: 20),
+                                      onPressed: _fetchData,
+                                      tooltip: 'Refresh Data',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Last updated ${_getFormattedElapsedTime()}",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          // Main Dashboard Content
+                          const SizedBox(height: 16),
+                          // Main Dashboard Content with Selected Date and Stylish Button
+                          Row(
+                            children: [
+                              InkWell(
+                                onTap:
+                                    _showCountersDialog, // Opens the dialog with counters
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(30),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF4A90E2),
+                                        Color(0xFF50E3C2)
+                                      ], // Blue and teal gradient
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        spreadRadius: 2,
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Text(
+                                    'Show Counters',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
                           DashboardWidget(
                             selectedDate: _selectedDate,
                             onDateSelected: _onDateSelected,

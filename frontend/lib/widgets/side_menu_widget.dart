@@ -18,14 +18,25 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
   @override
   Widget build(BuildContext context) {
     final data = SideMenuData();
+    final screenSize = MediaQuery.of(context).size;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
-      color: backgroundColor,
-      child: ListView.builder(
-        itemCount: data.menu.length,
-        itemBuilder: (context, index) => buildMenuEntry(data, index),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
+          child: Container(
+            color: backgroundColor,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  for (int i = 0; i < data.menu.length; i++)
+                    buildMenuEntry(data, i),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -74,21 +85,22 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
     );
   }
 
- Future<void> _handleLogout() async {
-  try {
-    await _apiServices.logout();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-      (Route<dynamic> route) => false, // Removes all routes until the login screen
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Logout failed: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
+  Future<void> _handleLogout() async {
+    try {
+      await _apiServices.logout();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (Route<dynamic> route) =>
+            false, // Removes all routes until the login screen
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
-}
 }

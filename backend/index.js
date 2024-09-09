@@ -5,6 +5,7 @@ import { connectToCompanyDetails, connectToDashboard } from "./config/dbConfig.j
 import salesRoutes from "./routes/salesRoutes.js";
 import customerRoute from "./routes/customerRoute.js";
 import loginRoute from "./routes/loginRoute.js";
+import counterRoutes from "./routes/counterRoute.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -26,7 +27,7 @@ async function startServer() {
     app.use("/", salesRoutes);
     app.use("/", customerRoute);
     app.use("/", loginRoute);
-
+app.use("/",counterRoutes);
     app.listen(port, () => {
       console.log(`Server is running on http://localhost:${port}`);
     });

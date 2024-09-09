@@ -4,7 +4,7 @@ import { generateToken, verifyToken } from "../config/auth.js";
 
 export const login = async (req, res) => {
   const { username, password } = req.body;
-  console.log(req.body, "Req body Received");
+ 
 
   try {
     // Step 1: Connect to the CompanyDetails database
@@ -16,7 +16,7 @@ export const login = async (req, res) => {
       .input("Login", mssql.VarChar, username)
       .query(`
         SELECT CompanyID, StationID, SystemRoleID, Password 
-        FROM CompanyDetails.dbo.UserLog 
+        FROM DashBoardCompanyDetails.dbo.UserLog 
         WHERE Login = @Login
       `);
 
@@ -25,14 +25,14 @@ export const login = async (req, res) => {
     }
 
     const { CompanyID, StationID, SystemRoleID } = userResult.recordset[0];
-    console.log(userResult.recordset[0]);
+
 
     // Step 3: Fetch company, branch details, and branch list in parallel
     const [companyResult, branchResult, branchesListResult] = await Promise.all([
       sql.request().input("CompanyID", mssql.VarChar, CompanyID)
         .query(`
           SELECT CompanyName, DbSchemaName 
-          FROM CompanyDetails.dbo.CompanyLog 
+          FROM DashBoardCompanyDetails.dbo.CompanyLog 
           WHERE CompanyID = @CompanyID
         `),
       sql.request().input("CompanyID", mssql.VarChar, CompanyID)
@@ -40,30 +40,18 @@ export const login = async (req, res) => {
         
         .query(`
           SELECT BranchName, ExpiryDate, ExpiryStatus 
-          FROM CompanyDetails.dbo.Branch_Log 
+          FROM DashBoardCompanyDetails.dbo.Branch_Log 
           WHERE CompanyID = @CompanyID AND BranchID = @BranchID
         `),
      
       sql.request().input("CompanyID", mssql.VarChar, CompanyID)
         .query(`
           SELECT BranchID, BranchName 
-          FROM CompanyDetails.dbo.Branch_Log 
+          FROM DashBoardCompanyDetails.dbo.Branch_Log 
           WHERE CompanyID = @CompanyID AND ExpiryStatus = 0
         `)
     ]);
-console.log(companyResult,`
-          SELECT CompanyName, DbSchemaName 
-          FROM CompanyDetails.dbo.CompanyLog 
-          WHERE CompanyID = @CompanyID
-        `, branchResult,`
-          SELECT BranchName, ExpiryDate, ExpiryStatus 
-          FROM CompanyDetails.dbo.Branch_Log 
-          WHERE CompanyID = @CompanyID AND BranchID = @BranchID
-        `, branchesListResult,`
-          SELECT BranchID, BranchName 
-          FROM CompanyDetails.dbo.Branch_Log 
-          WHERE CompanyID = @CompanyID AND ExpiryStatus = 0
-        `);
+
     if (companyResult.recordset.length === 0) {
       return res.status(404).json({ message: "Company not found" });
     }
@@ -75,7 +63,7 @@ console.log(companyResult,`
 
     const { CompanyName, DbSchemaName } = companyResult.recordset[0];
     let { BranchName, ExpiryDate, ExpiryStatus } = branchResult.recordset[0] || {};
-    console.log(BranchName, ExpiryDate, ExpiryStatus);
+    
     const branchesList = branchesListResult.recordset;
 
     // Check if DbSchemaName is undefined or null
@@ -92,18 +80,13 @@ console.log(companyResult,`
         .input("CompanyID", mssql.VarChar, CompanyID)
         .input("BranchID", mssql.VarChar, StationID)
         .query(`
-          UPDATE CompanyDetails.dbo.Branch_Log 
+          UPDATE DashBoardCompanyDetails.dbo.Branch_Log 
           SET ExpiryStatus = 1 
           WHERE CompanyID = @CompanyID AND BranchID = @BranchID
         `);
       ExpiryStatus = 0;
     }
-    console.log(`
-          UPDATE CompanyDetails.dbo.Branch_Log 
-          SET ExpiryStatus = 1 
-          WHERE CompanyID = @CompanyID AND BranchID = @BranchID
-        `);
-
+  
     // Generate JWT Token
     const token = generateToken({
       username,

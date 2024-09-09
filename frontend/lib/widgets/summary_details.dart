@@ -1,103 +1,77 @@
 import 'package:fitness_dashboard_ui/widgets/custom_card_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:fitness_dashboard_ui/services/api_services.dart';
+import 'package:fitness_dashboard_ui/data/pie_chart_data.dart'; // Ensure ChartData is imported
 
-class SummaryDetails extends StatefulWidget {
+class SummaryDetails extends StatelessWidget {
   final DateTime selectedDate;
+  final String? branchId; // Add branchId parameter
+  final ChartData chartData; // Pass ChartData to access colors
 
-  const SummaryDetails({super.key, required this.selectedDate});
-
-  @override
-  _SummaryDetailsState createState() => _SummaryDetailsState();
-}
-
-class _SummaryDetailsState extends State<SummaryDetails> {
-  List<Map<String, dynamic>> areaSales = [];
-  bool isLoading = true;
-  bool isError = false;
-  bool isAreaSalesUnavailable = false; // New flag for handling unavailable area sales
-
-  @override
-  void initState() {
-    super.initState();
-    print('SummaryDetails initState: Date is ${widget.selectedDate}');
-    fetchAreaSales(widget.selectedDate);
-  }
-
-  Future<void> fetchAreaSales(DateTime date) async {
-    print('SummaryDetails fetchAreaSales: Date is $date');
-    try {
-      ApiServices apiServices = ApiServices();
-      List<Map<String, dynamic>> data = await apiServices.fetchAreaSales(date);
-      setState(() {
-        if (data.isEmpty && apiServices.lastResponseStatusCode == 404) {
-          // Check if the API returned a 404 indicating area sales is not available
-          isAreaSalesUnavailable = true;
-        } else {
-          areaSales = data ?? [];
-        }
-        isLoading = false;
-        isError = false;
-      });
-    } catch (error) {
-      setState(() {
-        isLoading = false;
-        isError = true;
-      });
-    }
-  }
+  const SummaryDetails({
+    super.key,
+    required this.selectedDate,
+    this.branchId, // Include branchId
+    required this.chartData, // Include chartData
+  });
 
   @override
   Widget build(BuildContext context) {
-    print('SummaryDetails build: Date is ${widget.selectedDate}');
     return CustomCard(
       color: const Color(0xFF2F353E),
-      child: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : isError
-              ? const Center(
-                  child: Text(
-                    'Error loading data. Please try again later.',
-                    style: TextStyle(fontSize: 16, color: Colors.red),
-                  ),
-                )
-              : isAreaSalesUnavailable // Handle when area sales is unavailable
-                  ? const Center(
-                      child: Text(
-                        'Area sales data is not available for this company.',
-                        style: TextStyle(fontSize: 16, color: Colors.orange),
-                      ),
-                    )
-                  : areaSales.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No data available for the selected date.',
-                            style: TextStyle(fontSize: 16, color: Colors.white),
-                          ),
-                        )
-                      : Column(
-                          children: areaSales
-                              .map((area) => buildDetails(
-                                  area['areaName'],
-                                  area['totalSales'].toString()))
-                              .toList(),
-                        ),
+      child: chartData.areaSales.isEmpty
+          ? const Center(
+              child: Text(
+                'No data available for the selected date.',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            )
+          : Column(
+              children: chartData.areaSales.asMap().entries.map((entry) {
+                int index = entry.key;
+                Map<String, dynamic> area = entry.value;
+
+                // Handle out-of-bounds index issue
+                if (index >= chartData.chartColors.length) {
+                  return Container(); // Return empty widget if index is out of bounds
+                }
+
+                Color color = chartData.chartColors[index]; // Get the corresponding color
+                return buildDetails(
+                    area['areaName'] ?? 'Unknown Area',
+                    area['totalSales']?.toString() ?? '0',
+                    color); // Pass the color to the buildDetails method
+              }).toList(),
+            ),
     );
   }
 
-  Widget buildDetails(String key, String value) {
+  Widget buildDetails(String areaName, String totalSales, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            key,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          Row(
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: color, // Display the color here
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                areaName,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ],
           ),
           const SizedBox(width: 2),
           Text(
-            value,
+            totalSales,
             style: const TextStyle(
               fontSize: 14,
               color: Colors.white,

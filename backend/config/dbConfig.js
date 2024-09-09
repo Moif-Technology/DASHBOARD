@@ -32,4 +32,4 @@ const createDatabasePool = async (databaseName) => {
 
 // Specific functions to connect to each database
 export const connectToDashboard = () => createDatabasePool("DashBoard");
-export const connectToCompanyDetails = () => createDatabasePool("CompanyDetails");
+export const connectToCompanyDetails = () => createDatabasePool("DashBoardCompanyDetails");

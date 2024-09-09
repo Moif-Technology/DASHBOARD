@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class ApiServices {
-  final String _baseUrl = 'http://10.39.1.171:5000';
+  final String _baseUrl = 'http://10.39.1.115:5000';
   // final String _baseUrl = 'https://155f-5-195-73-11.ngrok-free.app';
   final FlutterSecureStorage _storage = FlutterSecureStorage();
   String? _token;
@@ -42,8 +42,6 @@ class ApiServices {
             int.tryParse(responseBody['ExpiryStatus'].toString()) ?? 0;
         final expiryDate = responseBody['ExpiryDate']?.toString() ?? "";
 
-        // Removed branch fetching logic here
-
         await TokenManager.saveAllData(
           token: token,
           companyId: companyId,
@@ -65,9 +63,8 @@ class ApiServices {
       } else if (response.statusCode == 403) {
         return 'Company subscription has expired.';
       } else if (response.statusCode == 404) {
-        // Handle specific status code scenarios
         final errorData = jsonDecode(response.body);
-        print('Error: ${errorData['message']}'); // Print the error message
+        print('Error: ${errorData['message']}');
       } else {
         print('Error: ${response.body}');
         return 'Error: ${response.statusCode}';
@@ -107,9 +104,8 @@ class ApiServices {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       print('API Response: $data');
-      return data; // Returning raw data to handle in specific methods
+      return data;
     } else if (response.statusCode == 403) {
-      // Handle expired status
       return {'expired': true, 'message': 'Company subscription has expired.'};
     } else {
       throw Exception('Failed to load data: ${response.statusCode}');
@@ -125,8 +121,9 @@ class ApiServices {
     return response;
   }
 
-  Future<List<Map<String, String>>> fetchBranches() async {
+  Future<List<Map<String, String>>> fetchBranches({String? branchId}) async {
     try {
+      branchId ??= await TokenManager.getStationID();
       final response = await get('/fetchBranches');
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
@@ -169,7 +166,6 @@ class ApiServices {
 
   Future<Map<String, dynamic>> fetchSalesDetails(String date,
       {String? branchId}) async {
-    // Prioritize the manually selected branch ID over the token-stored branch ID
     branchId ??= await TokenManager.getStationID();
 
     final endpoint = branchId != null
@@ -180,8 +176,14 @@ class ApiServices {
     return await _handleApiResponse(response);
   }
 
-  Future<int> fetchCustomerCount(String date) async {
-    final response = await get('/customerCount?date=$date');
+  Future<int> fetchCustomerCount(String date, {String? branchId}) async {
+    branchId ??= await TokenManager.getStationID();
+
+    final endpoint = branchId != null
+        ? '/customerCount?date=$date&branchId=$branchId'
+        : '/customerCount?date=$date';
+
+    final response = await get(endpoint);
     final data = await _handleApiResponse(response);
     if (data is Map<String, dynamic> && data.containsKey('totalCustomers')) {
       return data['totalCustomers'];
@@ -191,8 +193,13 @@ class ApiServices {
     }
   }
 
-  Future<List<FlSpot>> fetchMonthlySales() async {
-    final response = await get('/monthlySales');
+  Future<List<FlSpot>> fetchMonthlySales({String? branchId}) async {
+    branchId ??= await TokenManager.getStationID();
+
+    final endpoint =
+        branchId != null ? '/monthlySales?branchId=$branchId' : '/monthlySales';
+
+    final response = await get(endpoint);
     final data = await _handleApiResponse(response);
     if (data is List<dynamic>) {
       List<FlSpot> spots = [];
@@ -210,18 +217,23 @@ class ApiServices {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchAreaSales(DateTime date) async {
+  Future<List<Map<String, dynamic>>> fetchAreaSales(DateTime date,
+      {String? branchId}) async {
     try {
-      final response = await get('/areaSales?date=$date');
+      branchId ??= await TokenManager.getStationID();
+
+      final endpoint = branchId != null
+          ? '/areaSales?date=$date&branchId=$branchId'
+          : '/areaSales?date=$date';
+
+      final response = await get(endpoint);
       lastResponseStatusCode = response.statusCode;
       if (response.statusCode == 404) {
-        // Handle the scenario where area sales data is not available
         print('Area sales data is not available for this company.');
-        return []; // Return an empty list if data is not available
+        return [];
       }
 
       if (response.statusCode == 403) {
-        // Handle token expiry or subscription expiry
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message']);
       }
@@ -230,7 +242,7 @@ class ApiServices {
       if (data is List<dynamic>) {
         return data.map((item) => Map<String, dynamic>.from(item)).toList();
       } else if (data is Map<String, dynamic>) {
-        return [data]; // Wrap the single map in a list
+        return [data];
       } else {
         throw Exception(
             'Unexpected data format: Expected a List<Map<String, dynamic>> or Map<String, dynamic>');
@@ -240,4 +252,25 @@ class ApiServices {
       return [];
     }
   }
+Future<List> fetchCounterCloseDetails({String? branchId}) async {
+  branchId ??= await TokenManager.getStationID(); // Get branchId from token if not passed explicitly
+
+  final response = await get('/CounterClose?branchId=$branchId'); // Pass branchId as query parameter
+  final data = await _handleApiResponse(response);
+
+  if (data is List) {
+    return data.map((counter) {
+      return counter.map((key, value) {
+        if (value is int || value is double || value is DateTime) {
+          return MapEntry(key, value.toString());  // Convert int, double, DateTime to String
+        }
+        return MapEntry(key, value);  // Leave strings as they are
+      });
+    }).toList();
+  } else {
+    throw Exception('Unexpected data format: Expected a List<Map<String, dynamic>>');
+  }
+}
+
+
 }
