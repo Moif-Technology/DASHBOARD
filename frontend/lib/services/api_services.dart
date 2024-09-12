@@ -1,12 +1,12 @@
 import 'dart:convert';
+
 import 'package:fitness_dashboard_ui/services/token_management.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 
 class ApiServices {
-  final String _baseUrl = 'http://10.39.1.115:5000';
+  final String _baseUrl = 'http://10.39.1.155:5000';
   // final String _baseUrl = 'https://155f-5-195-73-11.ngrok-free.app';
   final FlutterSecureStorage _storage = FlutterSecureStorage();
   String? _token;
@@ -252,25 +252,122 @@ class ApiServices {
       return [];
     }
   }
-Future<List> fetchCounterCloseDetails({String? branchId}) async {
-  branchId ??= await TokenManager.getStationID(); // Get branchId from token if not passed explicitly
 
-  final response = await get('/CounterClose?branchId=$branchId'); // Pass branchId as query parameter
-  final data = await _handleApiResponse(response);
+  Future<List> fetchCounterCloseDetails({String? branchId}) async {
+    branchId ??= await TokenManager
+        .getStationID(); // Get branchId from token if not passed explicitly
 
-  if (data is List) {
-    return data.map((counter) {
-      return counter.map((key, value) {
-        if (value is int || value is double || value is DateTime) {
-          return MapEntry(key, value.toString());  // Convert int, double, DateTime to String
-        }
-        return MapEntry(key, value);  // Leave strings as they are
-      });
-    }).toList();
-  } else {
-    throw Exception('Unexpected data format: Expected a List<Map<String, dynamic>>');
+    final response = await get(
+        '/CounterClose?branchId=$branchId'); // Pass branchId as query parameter
+    final data = await _handleApiResponse(response);
+
+    if (data is List) {
+      return data.map((counter) {
+        return counter.map((key, value) {
+          if (value is int || value is double || value is DateTime) {
+            return MapEntry(key,
+                value.toString()); // Convert int, double, DateTime to String
+          }
+          return MapEntry(key, value); // Leave strings as they are
+        });
+      }).toList();
+    } else {
+      throw Exception(
+          'Unexpected data format: Expected a List<Map<String, dynamic>>');
+    }
   }
-}
 
+  Future<Map<String, dynamic>> fetchItemSaleReport({
+    required String fromDate,
+    required String toDate,
+    String? branchId,
+    String? groupName, // Include groupName as a parameter
+  }) async {
+    try {
+      // Fetch branchId from token if not provided
+      branchId ??= await TokenManager.getStationID();
 
+      // Construct API endpoint with query parameters, including groupName if provided
+      String endpoint =
+          '/getItemReport?fromDate=$fromDate&toDate=$toDate&branchId=$branchId';
+
+      if (groupName != null && groupName.isNotEmpty) {
+        endpoint +=
+            '&groupName=$groupName'; // Add groupName to the query if it's provided
+      }
+
+      // Make the GET request
+      final response = await get(endpoint);
+
+      // Print raw response to debug the issue
+      print('API Raw Response: ${response.body}');
+
+      // Handle the response using the utility function
+      final data = await _handleApiResponse(response);
+
+      // If the response is a map, return groupNames and data
+      if (data is Map<String, dynamic>) {
+        final groupNames = data['groupNames'] != null
+            ? List<String>.from(data['groupNames'])
+            : [];
+        final dataList = data['data'] != null
+            ? List<Map<String, dynamic>>.from(data['data'])
+            : [];
+
+        return {
+          'groupNames': groupNames,
+          'data': dataList,
+        };
+      } else {
+        throw Exception(
+            'Unexpected data format: Expected a Map<String, dynamic>');
+      }
+    } catch (e) {
+      print('Error fetching item sale report: $e');
+      return {
+        'groupNames': [],
+        'data': [],
+      };
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGroupReport({
+    required String fromDate,
+    required String toDate,
+    String? branchId,
+  }) async {
+    try {
+      // Ensure token is loaded before making the request
+      await _loadToken();
+
+      // Construct the API endpoint
+      final endpoint = branchId != null
+          ? '/getGroupReport?fromDate=$fromDate&toDate=$toDate&branchId=$branchId'
+          : '/getGroupReport?fromDate=$fromDate&toDate=$toDate';
+
+      // Make the GET request with the token
+      final response = await http.get(
+        Uri.parse('$_baseUrl$endpoint'),
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      // Handle the API response
+      final data = await _handleApiResponse(response);
+
+      // Ensure that the data is in the expected format (List of Maps)
+      if (data is List<dynamic>) {
+        return data.map((item) => Map<String, dynamic>.from(item)).toList();
+      } else if (data is Map<String, dynamic> && data.containsKey('data')) {
+        return List<Map<String, dynamic>>.from(data['data']);
+      } else {
+        throw Exception('Unexpected data format: Expected a List of Maps');
+      }
+    } catch (e) {
+      print('Error fetching group report: $e');
+      return [];
+    }
+  }
 }

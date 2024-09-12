@@ -1,11 +1,15 @@
 import 'package:fitness_dashboard_ui/const/constant.dart';
 import 'package:fitness_dashboard_ui/data/side_menu_data.dart';
-import 'package:fitness_dashboard_ui/widgets/login_widget.dart';
-import 'package:flutter/material.dart';
 import 'package:fitness_dashboard_ui/services/api_services.dart';
+import 'package:fitness_dashboard_ui/widgets/group_report.dart';
+import 'package:fitness_dashboard_ui/widgets/login_widget.dart';
+import 'package:fitness_dashboard_ui/widgets/reports_details.dart';
+import 'package:flutter/material.dart';
 
 class SideMenuWidget extends StatefulWidget {
-  const SideMenuWidget({super.key});
+   final String? selectedBranchId; // Accept branchId from MainScreen
+
+  const SideMenuWidget({super.key, this.selectedBranchId});
 
   @override
   State<SideMenuWidget> createState() => _SideMenuWidgetState();
@@ -56,10 +60,32 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
           setState(() {
             selectedIndex = index;
           });
+
+          // Handle SignOut
           if (data.menu[index].title == 'SignOut') {
             await _handleLogout();
-          } else {
-            // Handle other menu options
+          }
+          // Handle Reports navigation
+          else if (data.menu[index].title == 'Items Reports') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ReportTable(
+                  branchId: widget.selectedBranchId, 
+                ),
+              ),
+            );
+          }
+          // Handle other menu options (if any)
+           else if (data.menu[index].title == 'Group Reports') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GroupReportTable(
+                  branchId: widget.selectedBranchId, // Pass branchId to GroupReportTable
+                ),
+              ),
+            );
           }
         },
         child: Row(

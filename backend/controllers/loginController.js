@@ -130,13 +130,13 @@ export const logout = (req, res) => {
     }
 
     // Verify the token
-    const decodedToken = verifyToken(token);
+    // const decodedToken = verifyToken(token);
 
-    if (!decodedToken) {
-      return res.status(401).json({ message: "Invalid token" });
-    }
+    // if (!decodedToken) {
+    //   return res.status(401).json({ message: "Invalid token" });
+    // }
 
-    console.log(`User ${decodedToken.username} logged out successfully`);
+    console.log(`User logged out successfully`);
 
     // Since no token storage is involved, just respond with success
     res.status(200).json({ message: "Logged out successfully" });

@@ -158,9 +158,11 @@ void _showCountersDialog() {
 
     return Scaffold(
       drawer: !isDesktop
-          ? const SizedBox(
+          ? SizedBox(
               width: 250,
-              child: SideMenuWidget(),
+              child: SideMenuWidget(
+                selectedBranchId: _selectedBranchId, // Pass branchId to SideMenu
+              ),
             )
           : null,
       endDrawer: isMobile
