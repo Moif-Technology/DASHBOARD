@@ -56,7 +56,9 @@ console.log(req.query,"item report");
       const formattedFromDate = `${fromDate} 05:00:00 AM`; // Assuming fromDate is in 'YYYY-MM-DD' format
       const formattedToDate = `${toDate} 05:00:00 AM`; // Assuming toDate is in 'YYYY-MM-DD' format
 
-
+console.log(formattedFromDate);
+console.log(formattedToDate);
+console.log(branchId);
 
       // Base SQL query for the report
       let reportQuery = `
@@ -82,7 +84,8 @@ console.log(req.query,"item report");
         request.input('GroupName', groupName); // Add GroupName parameter to the request
         console.log('GroupName:', groupName);
       }
-
+console.log(groupName);
+      console.log(reportQuery,"Report query");
 
       // Add GROUP BY clause to the query
       reportQuery += `
@@ -157,6 +160,23 @@ export const getGroupReport = async (req, res) => {
           GroupName
       `;
   
+      console.log(`
+        SELECT 
+          GroupName, 
+          SUM(Qty) AS TotalQty, 
+          ROUND(SUM(LineTotal), 2) AS TotalAmount
+        FROM 
+          ${dbSchemaName}.SalesChild sc
+        JOIN 
+          ${dbSchemaName}.SalesMaster sm ON sc.SalesID = sm.SalesID
+        WHERE 
+          sc.LineTotal <> 0 
+          AND sm.BillTime > @FromDate 
+          AND sm.BillTime < @ToDate 
+          AND sc.StationID = @BranchID
+        GROUP BY 
+          GroupName
+      `);
       const result = await request
         .input('FromDate', formattedFromDate)
         .input('ToDate', formattedToDate)

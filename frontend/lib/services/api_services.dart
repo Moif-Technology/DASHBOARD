@@ -292,9 +292,11 @@ class ApiServices {
           '/getItemReport?fromDate=$fromDate&toDate=$toDate&branchId=$branchId';
 
       if (groupName != null && groupName.isNotEmpty) {
-        endpoint +=
-            '&groupName=$groupName'; // Add groupName to the query if it's provided
+        // Use Uri.encodeComponent to encode the groupName before adding it to the query string
+        endpoint += '&groupName=${Uri.encodeComponent(groupName)}';
       }
+      // Print the constructed API endpoint to debug the query parameters
+      print('Constructed API endpoint: $endpoint');
 
       // Make the GET request
       final response = await get(endpoint);

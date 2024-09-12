@@ -305,7 +305,7 @@ class _ReportTableState extends State<ReportTable> {
                     onChanged: (String? newValue) {
                       setState(() {
                         selectedGroup = newValue;
-
+                        print("Selected Group: $selectedGroup");
                         // Fetch the report immediately after group selection
                         if (fromDate != null && toDate != null) {
                           fetchItemSaleReport();
