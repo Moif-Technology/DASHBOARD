@@ -15,7 +15,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   fl_chart: ^0.68.0
   flutter_svg: ^2.0.5
-  flutter_staggered_grid_view: ^0.4.0 # Add this line
+  flutter_staggered_grid_view: ^0.4.0
   intl: ^0.19.0
   google_fonts: ^6.2.1
   flutter_secure_storage: ^5.0.2
@@ -26,10 +26,18 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.11.0  # Added flutter_launcher_icons for app icon generation
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"  # Path to your app icon image
+  # adaptive_icon_background: "assets/icons/background.png"  # Optional for Android adaptive icon
+  # adaptive_icon_foreground: "assets/icons/foreground.png"  # Optional for Android adaptive icon
 
 flutter:
 
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/icons/  
+    - assets/icons/

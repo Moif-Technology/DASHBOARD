@@ -6,8 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ApiServices {
-  // final String _baseUrl = 'http://10.39.1.39:5000';
-  final String _baseUrl = 'https://111a-5-195-73-11.ngrok-free.app';
+  // final String _baseUrl = 'http://10.39.1.64:5000';
+  final String _baseUrl = 'https://dashboard-two-sigma-80.vercel.app';
   final FlutterSecureStorage _storage = FlutterSecureStorage();
   String? _token;
   int? lastResponseStatusCode;

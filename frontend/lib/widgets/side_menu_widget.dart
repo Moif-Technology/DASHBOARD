@@ -68,7 +68,7 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
           // Handle Reports navigation
           else if (data.menu[index].title == 'Items Reports') {
             Navigator.push(
-              context,
+             context,
               MaterialPageRoute(
                 builder: (context) => ReportTable(
                   branchId: widget.selectedBranchId, 

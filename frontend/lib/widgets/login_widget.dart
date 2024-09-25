@@ -1,7 +1,7 @@
+import 'package:another_flushbar/flushbar.dart'; // Import the another_flushbar package
 import 'package:fitness_dashboard_ui/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:another_flushbar/flushbar.dart'; // Import the another_flushbar package
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -12,28 +12,36 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSecurePassword = true;
+  bool _isLoading = false; // To track loading state
   final ApiServices _apiServices = ApiServices(); // Centralized API service
   final FlutterSecureStorage _storage =
       FlutterSecureStorage(); // For secure storage of JWT
 
   void _login() async {
+    // Disable the button during the login process
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       String? loginError = await _apiServices.login(
         _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
+      // Handle login error
       if (loginError != null) {
         _showErrorFlushbar(loginError);
       } else {
         await Future.delayed(Duration(milliseconds: 500));
 
-        // Fetch the saved token and company details from secure storage
+        // Fetch token and company details from secure storage
         final String? token = await _storage.read(key: 'token');
         final String? companyId = await _storage.read(key: 'companyId');
         final String? companyName = await _storage.read(key: 'companyName');
         final String? dbSchemaName = await _storage.read(key: 'dbSchemaName');
 
+        // Only proceed if all values are valid
         if (token != null &&
             token.isNotEmpty &&
             companyId != null &&
@@ -42,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
             companyName.isNotEmpty &&
             dbSchemaName != null &&
             dbSchemaName.isNotEmpty) {
-          // Always navigate to the main screen
           Navigator.pushReplacementNamed(
             context,
             '/main',
@@ -54,6 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       _showErrorFlushbar('Login failed: $e');
+    } finally {
+      // Enable the button again after the login attempt
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -62,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
       message: message,
       backgroundColor: Colors.redAccent,
       duration: Duration(seconds: 3),
-      flushbarPosition: FlushbarPosition.TOP, // Position it at the bottom
+      flushbarPosition: FlushbarPosition.TOP, // Position it at the top
       margin: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       padding: EdgeInsets.all(15.0),
       borderRadius: BorderRadius.circular(12.0),
@@ -254,12 +266,18 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         child: ElevatedButton(
-          onPressed: _login,
-          child: Text(
-            'Login',
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-          ),
+          onPressed: _isLoading ? null : _login, // Disable button if loading
+          child: _isLoading
+              ? CircularProgressIndicator(
+                  color: Colors.white,
+                )
+              : Text(
+                  'Login',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white),
+                ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,

@@ -1,0 +1,40 @@
+<variant
+    name="release"
+    package="com.example.fitness_dashboard_ui"
+    minSdkVersion="21"
+    targetSdkVersion="34"
+    shrinking="true"
+    mergedManifest="D:\Dashboard\frontend\build\app\intermediates\merged_manifest\release\AndroidManifest.xml"
+    proguardFiles="D:\Dashboard\frontend\build\app\intermediates\default_proguard_files\global\proguard-android.txt-7.3.0;C:\flutter\packages\flutter_tools\gradle\flutter_proguard_rules.pro;proguard-rules.pro"
+    partialResultsDir="D:\Dashboard\frontend\build\app\intermediates\lint_vital_partial_results\release\out"
+    desugaredMethodsFiles="C:\Users\LAPTOP SHOP\.gradle\caches\transforms-3\e1c3129403eeec743f57ee238d0f74d1\transformed\D8BackportedDesugaredMethods.txt">
+  <buildFeatures
+      namespacing="REQUIRED"/>
+  <sourceProviders>
+    <sourceProvider
+        manifest="src\main\AndroidManifest.xml"
+        javaDirectories="src\main\java;src\main\kotlin"
+        resDirectories="src\main\res"
+        assetsDirectories="src\main\assets"/>
+    <sourceProvider
+        manifest="src\release\AndroidManifest.xml"
+        javaDirectories="src\release\java;src\release\kotlin"
+        resDirectories="src\release\res"
+        assetsDirectories="src\release\assets"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <manifestPlaceholders>
+    <placeholder
+        name="applicationName"
+        value="android.app.Application" />
+  </manifestPlaceholders>
+  <mainArtifact
+      classOutputs="D:\Dashboard\frontend\build\app\intermediates\javac\release\classes;D:\Dashboard\frontend\build\app\tmp\kotlin-classes\release;D:\Dashboard\frontend\build\app\kotlinToolingMetadata;D:\Dashboard\frontend\build\app\intermediates\compile_and_runtime_not_namespaced_r_class_jar\release\R.jar"
+      applicationId="com.example.fitness_dashboard_ui"
+      generatedSourceFolders="D:\Dashboard\frontend\build\app\generated\ap_generated_sources\release\out;D:\Dashboard\frontend\build\app\generated\aidl_source_output_dir\release\out;D:\Dashboard\frontend\build\app\generated\source\buildConfig\release;D:\Dashboard\frontend\build\app\generated\renderscript_source_output_dir\release\out"
+      generatedResourceFolders="D:\Dashboard\frontend\build\app\generated\res\rs\release;D:\Dashboard\frontend\build\app\generated\res\resValues\release">
+  </mainArtifact>
+</variant>
